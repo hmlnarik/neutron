@@ -182,3 +182,15 @@ class NeutronDebugAgent(object):
         for fixed_ip in port.fixed_ips:
             fixed_ip.subnet = self._get_subnet(fixed_ip.subnet_id)
         return port
+
+    def get_floating_ips(self):
+        return self.client.list_floatingips()['floatingips']
+
+    def get_device_ports(self, device_id=None):
+        return self.client.list_ports(device_id=device_id)['ports']
+
+    def get_network_ports(self, network_id=None):
+        return self.client.list_ports(network_id=network_id)['ports']
+
+    def get_router(self, router_id=None):
+        return self.client.show_router(router_id)['router']

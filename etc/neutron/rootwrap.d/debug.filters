@@ -16,3 +16,5 @@ ping: RegExpFilter, ping, root, ping, -w, \d+, -c, \d+, [0-9\.]+
 ping_alt: RegExpFilter, ping, root, ping, -c, \d+, -w, \d+, [0-9\.]+
 ping6: RegExpFilter, ping6, root, ping6, -w, \d+, -c, \d+, [0-9A-Fa-f:]+
 ping6_alt: RegExpFilter, ping6, root, ping6, -c, \d+, -w, \d+, [0-9A-Fa-f:]+
+nc4: RegExpFilter, nc, root, nc, -6, -w, \d+, [0-9A-Fa-f:]+, [0-9]+, -e, /bin/true
+nc6: RegExpFilter, nc, root, nc, -4, -w, \d+, [0-9\.]+, [0-9]+, -e, /bin/true

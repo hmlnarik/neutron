@@ -41,6 +41,8 @@ COMMAND_V2 = {
         'neutron.debug.commands.ExecProbe'),
     'ping-all': importutils.import_class(
         'neutron.debug.commands.PingAll'),
+    'diagnose-router': importutils.import_class(
+        'neutron.debug.diagnostic_commands.DiagnoseRouter'),
     #TODO(nati)  ping, netcat , nmap, bench
 }
 COMMANDS = {'2.0': COMMAND_V2}
