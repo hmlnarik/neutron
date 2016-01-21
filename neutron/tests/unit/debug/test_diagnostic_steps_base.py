@@ -44,6 +44,7 @@ FAKE_ROUTER1_PORT1 = {
     'admin_state_up': True,
     'network_id': FAKE_NETWORK1_ID,
     'tenant_id': 'fake_tenant',
+    "id": "00000001-0001-4114-8065-1db1f8bee302",
     portbindings.HOST_ID: cfg.CONF.host,
     "fixed_ips": [
         {
@@ -62,6 +63,7 @@ FAKE_ROUTER1_PORT2 = {
     'admin_state_up': True,
     'network_id': FAKE_NETWORK1_ID,
     'tenant_id': 'fake_tenant',
+    "id": "00000001-0002-4114-8065-1db1f8bee303",
     portbindings.HOST_ID: cfg.CONF.host,
     'fixed_ips': [{'subnet_id': FAKE_SUBNET1_ID}],
     'device_id': socket.gethostname()}
@@ -71,6 +73,7 @@ FAKE_ROUTER2_PORT1 = {
     'admin_state_up': True,
     'network_id': FAKE_NETWORK1_ID,
     'tenant_id': 'fake_tenant',
+    "id": "00000002-0001-4114-8065-1db1f8bee304",
     portbindings.HOST_ID: cfg.CONF.host,
     "fixed_ips": [
         {
@@ -134,7 +137,7 @@ class TestExecCmdWithIpFromNamespaceStep(base.BaseTestCase):
     class TestCommand(dsb.ExecCmdWithIpFromNamespaceStep):
         def __init__(self, **kwargs):
             dsb.ExecCmdWithIpFromNamespaceStep.__init__(self,
-                                                        "Test Command",
+                                                        name="Test Command",
                                                         **kwargs)
 
         def clone_for_ip_address(self, new_ip_address):
@@ -142,9 +145,25 @@ class TestExecCmdWithIpFromNamespaceStep(base.BaseTestCase):
                     target_ip_address=new_ip_address)
 
         def get_command(self, state):
-            return '/bin/true'
+            return '/bin/true "blah bla"'
 
     def test_diagnose_no_namespace(self):
+        state = dsb.DiagnosticStepState()
+        cmd = TestExecCmdWithIpFromNamespaceStep.TestCommand(
+            target_ip_addr=IPV4_ROUTER1_PORT1
+        )
+
+        with mock.patch('neutron.agent.linux.ip_lib.IpNetnsCommand') as ns:
+            agent = mock.Mock()
+            result = cmd.diagnose(agent, state)
+
+            ns.assert_has_calls([mock.call().execute(["/bin/true", "blah bla"],
+                                                     log_fail_as_error=False,
+                                                     run_as_root=True)])
+
+        a.assert_that(result, m.IsInstance(dsb.DiagnosticStepResult))
+
+    def test_diagnose_with_namespace(self):
         state = dsb.DiagnosticStepState()
         cmd = TestExecCmdWithIpFromNamespaceStep.TestCommand(
             target_ip_addr=IPV4_ROUTER1_PORT1,
@@ -155,7 +174,7 @@ class TestExecCmdWithIpFromNamespaceStep(base.BaseTestCase):
             agent = mock.Mock()
             result = cmd.diagnose(agent, state)
 
-            ns.assert_has_calls([mock.call().execute(["/bin/true"],
+            ns.assert_has_calls([mock.call().execute(["/bin/true", "blah bla"],
                                                      log_fail_as_error=False,
                                                      run_as_root=True)])
 

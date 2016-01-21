@@ -19,6 +19,8 @@ from neutron._i18n import _
 TEST_PASSED_MSG = _('ok')
 TEST_FAILED_MSG = _('FAIL')
 TEST_ABORTED_MSG = _('ABORTED')
+INDENT_MARK = "%s  - "
+INDENT_SPACE = "    "
 
 # TODO(hmlnarik) Make the following commands customizable in the config file
 PING_IPV4 = "ping -c 1 -w %(timeout)s %(destination)s"

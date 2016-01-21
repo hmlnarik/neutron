@@ -50,19 +50,21 @@ class PingFromNamespaceStep(ds.ExecCmdWithIpFromNamespaceStep):
 
 
 class PingFromRouterNamespaceStep(PingFromNamespaceStep):
+    name = _('Ping from router namespace')
+
     def __init__(self, router_id=None, **kwargs):
         PingFromNamespaceStep.__init__(
             self,
-            name=_('Ping from router namespace'),
             namespace=ds_ns.router_ns(router_id),
             **kwargs)
 
 
 class PingFromDhcpNamespaceStep(PingFromNamespaceStep):
+    name = _('Ping from network namespace')
+
     def __init__(self, network_id=None, **kwargs):
         PingFromNamespaceStep.__init__(
             self,
-            name=_('Ping from network namespace'),
             namespace=ds_ns.dhcp_ns(network_id),
             **kwargs)
         self.network_id = network_id

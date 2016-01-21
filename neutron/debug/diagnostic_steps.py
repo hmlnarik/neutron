@@ -27,10 +27,10 @@ LOG = logging.getLogger(__name__)
 
 
 class CheckPortsAdminStateUpStep(dsb.DiagnosticStep):
-    def __init__(self,
-                 name=_('Check admin state of ports'),
-                 get_ports_func=None):
-        dsb.DiagnosticStep.__init__(self, name)
+    name = _('Check admin state of ports')
+
+    def __init__(self, get_ports_func=None, **kwargs):
+        dsb.DiagnosticStep.__init__(self, **kwargs)
         self.get_ports_func = get_ports_func
 
     def diagnose(self, debug_agent, state):
@@ -51,10 +51,10 @@ class CheckPortsAdminStateUpStep(dsb.DiagnosticStep):
 
 
 class CheckRouterAdminStateUpStep(dsb.DiagnosticStep):
-    def __init__(self,
-                 name=_('Check admin state of router'),
-                 router_id=None):
-        dsb.DiagnosticStep.__init__(self, name)
+    name = _('Check admin state of router')
+
+    def __init__(self, router_id=None, **kwargs):
+        dsb.DiagnosticStep.__init__(self, **kwargs)
         self.router_id = router_id
 
     def diagnose(self, debug_agent, state):
@@ -101,10 +101,11 @@ class CheckTcpPortOpenFromNsStep(dsb.ExecCmdWithIpFromNamespaceStep):
 
 
 class CheckTcpPortOpenFromRouterNamespaceStep(CheckTcpPortOpenFromNsStep):
+    name = _('Check TCP port open from router namespace')
+
     def __init__(self, router_id=None, **kwargs):
         CheckTcpPortOpenFromNsStep.__init__(
             self,
-            name=_('Check TCP port open from router namespace'),
             namespace=ds_ns.router_ns(router_id),
             **kwargs
         )
@@ -116,9 +117,10 @@ class ObtainRouterPortsAndNetworksStep(dsb.DiagnosticStep):
     the obtained ports into state[KEY_ROUTER_NETWORK_IDS][router_id]
     """
 
-    def __init__(self, router_id=None, get_ports_func=None):
-        dsb.DiagnosticStep.__init__(self,
-                                    _('Obtain router ports and networks'))
+    name = _('Obtain router ports and networks')
+
+    def __init__(self, router_id=None, get_ports_func=None, **kwargs):
+        dsb.DiagnosticStep.__init__(self, **kwargs)
         if get_ports_func:
             self.get_ports_func = get_ports_func
         elif router_id is not None:
@@ -163,8 +165,10 @@ class ObtainRouterPortsAndNetworksStep(dsb.DiagnosticStep):
 
 
 class ObtainNetworkPortsStep(dsb.DiagnosticStep):
-    def __init__(self, network_id=None, get_ports_func=None):
-        dsb.DiagnosticStep.__init__(self, _('Obtain network ports'))
+    name = _('Obtain network ports')
+
+    def __init__(self, network_id=None, get_ports_func=None, **kwargs):
+        dsb.DiagnosticStep.__init__(self, **kwargs)
         if get_ports_func:
             self.get_ports_func = get_ports_func
         elif network_id is not None:
@@ -202,6 +206,8 @@ class ObtainNetworkPortsStep(dsb.DiagnosticStep):
 
 
 class ObtainFloatingToFixedIpStep(dsb.DiagnosticStep):
+    name = _('Obtain floating to fixed IP map')
+
     """Obtains information on floating IPs from server and stores
     this data to state.
 
@@ -209,12 +215,13 @@ class ObtainFloatingToFixedIpStep(dsb.DiagnosticStep):
         nothing
 
     """
-    def __init__(self):
-        dsb.DiagnosticStep.__init__(self, _('Obtain floating to fixed IP map'))
+    def __init__(self, **kwargs):
+        dsb.DiagnosticStep.__init__(self, **kwargs)
 
     def diagnose(self, debug_agent, state):
         for f in debug_agent.get_floating_ips():
             state.add_floating_to_fixed_ip(f['floating_ip_address'],
-                                           f['fixed_ip_address'])
+                                           f['fixed_ip_address'],
+                                           f.get('port_id', None))
 
         return self.create_result_info(True, state.get_floating_ips())

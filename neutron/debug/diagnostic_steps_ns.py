@@ -24,14 +24,15 @@ def router_ns(router_id):
     return namespaces.build_ns_name(namespaces.NS_PREFIX, router_id)
 
 
-def dhcp_ns(network_id):
-    return namespaces.build_ns_name(dhcp.NS_PREFIX, network_id)
+def dhcp_ns(dhcp_id):
+    return namespaces.build_ns_name(dhcp.NS_PREFIX, dhcp_id)
 
 
 class CheckRouterNamespaceExistenceStep(dsb.DiagnosticStep):
-    def __init__(self, router_id):
-        dsb.DiagnosticStep.__init__(self,
-                                    _('Check existence of router namespace'))
+    name = _('Check existence of router namespace')
+
+    def __init__(self, router_id, **kwargs):
+        dsb.DiagnosticStep.__init__(self, **kwargs)
         self.router_id = router_id
 
     def diagnose(self, debug_agent, state):
@@ -39,13 +40,14 @@ class CheckRouterNamespaceExistenceStep(dsb.DiagnosticStep):
         ns = router_ns(self.router_id)
         result = root_ip.netns.exists(ns)
 
-        return self.create_result_info(result)
+        return self.create_result_info(result, _("namespace: %s") % ns)
 
 
 class CheckNetworkNamespaceExistenceStep(dsb.DiagnosticStep):
-    def __init__(self, network_id):
-        dsb.DiagnosticStep.__init__(self,
-                                    _('Check existence of network namespace'))
+    name = _('Check existence of network namespace')
+
+    def __init__(self, network_id, **kwargs):
+        dsb.DiagnosticStep.__init__(self, **kwargs)
         self.network_id = network_id
 
     def diagnose(self, debug_agent, state):
@@ -53,4 +55,4 @@ class CheckNetworkNamespaceExistenceStep(dsb.DiagnosticStep):
         ns = dhcp_ns(self.network_id)
         result = root_ip.netns.exists(ns)
 
-        return self.create_result_info(result)
+        return self.create_result_info(result, _("namespace: %s") % ns)

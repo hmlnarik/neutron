@@ -29,14 +29,17 @@ from neutron.debug import exceptions as exc
 
 @six.add_metaclass(abc.ABCMeta)
 class DiagnosticStep(object):
-    def __init__(self, step_name):
-        self._name = step_name
+    def __init__(self, name=None):
+        # Allow overriding default name in constructor to enable more specific
+        # step names when desirable
+        if name is not None:
+            self.name = name
 
     def get_name(self):
         """Returns human-readable name of the diagnostic step.
         :return: Name of the step
         """
-        return self._name
+        return str(self.name)
 
     def __str__(self):
         return self.get_name()
@@ -61,6 +64,7 @@ class DiagnosticStepResult(object):
     """
     Container holding result of a single diagnostic step execution.
     """
+
     def __init__(self, step, result, message=None):
         """
         Constructs DiagnosticStepResult instance.
@@ -70,10 +74,13 @@ class DiagnosticStepResult(object):
                        should be short. Bool is converted into "ok" or "FAIL"
         :param message: Additional
         """
+
+        self.result = result
         if type(result) is bool:
-            self.result = c.TEST_PASSED_MSG if result else c.TEST_FAILED_MSG
+            self.result_message = (c.TEST_PASSED_MSG if result
+                                   else c.TEST_FAILED_MSG)
         else:
-            self.result = result
+            self.result_message = result
 
         self.step = step
         self.message = message
@@ -95,62 +102,79 @@ class DiagnosticStepResult(object):
     def get_result(self):
         return self.result
 
+    def get_result_message(self):
+        return self.result_message
+
+    def __str__(self):
+        return "%s: %s (%s)" % (self.step, self.result, self.message)
+
 
 class DiagnosticStepState(dict):
     def __init__(self, **kwargs):
         dict.__init__(self, **kwargs)
         self.floating_to_fixed = {}
-        self.network_ports = {}
-        self.router_ports = {}
-        self.next_steps = []
-        self.ipaddr_to_port = {}
+        self.ports = {}             # { port_id -> port_record }
+        self.network_ports = {}     # { network_id -> [ port_ids ] }
+        self.router_ports = {}      # { router_id -> [ port_ids ] }
+        self.next_steps = []        # [ steps ] }
+        self.ipaddr_to_port = {}    # { ip_addr -> port_id }
 
     def _add_ipaddr_to_port(self, ports):
         for port in ports:
+            port_id = port['id']
+            self.ports[port_id] = port
+
             for f in port.get('fixed_ips', []):
                 if "ip_address" in f:
                     ip = IPAddress(f['ip_address'])
-                    self.ipaddr_to_port[ip] = port
+                    self.ipaddr_to_port[ip] = port['id']
 
-    def add_floating_to_fixed_ip(self, floating_ip, fixed_ip):
-        self.floating_to_fixed[floating_ip] = fixed_ip
+    def add_floating_to_fixed_ip(self, floating_ip, fixed_ip, port_id):
+        fl_ip = IPAddress(floating_ip)
+        self.floating_to_fixed[fl_ip] = fixed_ip
+        if port_id:
+            self.ipaddr_to_port[fl_ip] = port_id
 
     def get_fixed_from_floating_ip(self, fixed_ip):
-        return self.floating_to_fixed.get(fixed_ip, None)
+        fl_ip = IPAddress(fixed_ip)
+        return self.floating_to_fixed.get(fl_ip, None)
 
     def get_floating_ips(self):
         return self.floating_to_fixed.keys()
 
     def get_port_from_ip_address(self, ip_address):
-        return self.ipaddr_to_port.get(IPAddress(ip_address), None)
+        port_id = self.ipaddr_to_port.get(IPAddress(ip_address), None)
+        return self.ports.get(port_id, None)
 
     def add_network_ports(self, network_id, *ports):
-        if network_id not in self.network_ports:
-            self.network_ports[network_id] = []
-
-        self.network_ports[network_id].extend(ports)
-
+        self.network_ports.setdefault(network_id, [])
+        self.network_ports[network_id].extend([port['id'] for port in ports])
+        self.ports.update({port['id']: port for port in ports})
         self._add_ipaddr_to_port(ports)
 
     def get_network_ports(self, network_id):
-        return self.network_ports.get(network_id, None)
+        return [
+            self.ports.get(port_id, None)
+            for port_id in self.network_ports.get(network_id, [])
+        ]
 
     def add_router_ports(self, router_id, *ports):
-        if router_id not in self.router_ports:
-            self.router_ports[router_id] = []
-
-        self.router_ports[router_id].extend(ports)
-
+        self.router_ports.setdefault(router_id, [])
+        self.router_ports[router_id].extend([port['id'] for port in ports])
+        self.ports.update({port['id']: port for port in ports})
         self._add_ipaddr_to_port(ports)
 
     def get_router_ports(self, router_id):
-        return self.router_ports.get(router_id, None)
+        return [
+            self.ports.get(port_id, None)
+            for port_id in self.router_ports.get(router_id, [])
+        ]
 
 
 @six.add_metaclass(abc.ABCMeta)
 class ExecCmdWithIpFromNamespaceStep(DiagnosticStep):
-    def __init__(self, name, namespace=None, target_ip_addr=None):
-        DiagnosticStep.__init__(self, name)
+    def __init__(self, namespace=None, target_ip_addr=None, **kwargs):
+        DiagnosticStep.__init__(self, **kwargs)
         self.namespace = namespace
         self.target_ip_addr = target_ip_addr
 
@@ -230,8 +254,9 @@ class ExecCmdWithIpFromNamespaceStep(DiagnosticStep):
         # If this step was performed using a floating IP and there is
         # a corresponding fixed IP, redo the same step with fixed IP
         fixed_ip = state.get_fixed_from_floating_ip(str(self.target_ip_addr))
-        if fixed_ip:
+        if fixed_ip and not res.get_result():
             next_step = self.clone_for_ip_address(fixed_ip)
+            next_step.name = _("Retry the same step for fixed IP")
             res.add_next_step(next_step)
 
         return res
