@@ -22,6 +22,7 @@ from oslo_utils import importutils
 from neutron._i18n import _
 from neutron.agent.common import config
 from neutron.agent.common import utils
+from neutron.agent.dhcp import config as dhcp_config
 from neutron.agent.linux import interface
 from neutron.common import config as common_config
 from neutron.debug import debug_agent
@@ -73,8 +74,9 @@ class NeutronDebugShell(shell.NeutronShell):
             dest="config_opts",
             action=NeutronDebugShell.ExtendListAction,
             metavar='PATH',
-            help=_('Config file for interface driver '
-                   '(You may also use l3_agent.ini)'))
+            help=_('Config files for interface driver and DHCP '
+                   '(You may also use neutron.ini, l3_agent.ini, and'
+                   'dhcp_agent.ini)'))
         parser.add_argument(
             '--config-dir',
             default=default,
@@ -85,6 +87,9 @@ class NeutronDebugShell(shell.NeutronShell):
         return parser
 
     def register_opts(self, conf):
+        conf.register_opts(dhcp_config.DHCP_AGENT_OPTS)
+        conf.register_opts(dhcp_config.DHCP_OPTS)
+        conf.register_opts(dhcp_config.DNSMASQ_OPTS)
         conf.register_opts(interface.OPTS)
         conf.register_opts(config.EXT_NET_BRIDGE_OPTS)
         config.register_interface_driver_opts_helper(conf)

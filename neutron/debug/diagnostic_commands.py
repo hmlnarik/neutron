@@ -23,6 +23,7 @@ from neutron._i18n import _
 from neutron.debug import constants as c
 from neutron.debug import diagnostic_steps as ds
 from neutron.debug import diagnostic_steps_base as dsb
+from neutron.debug import diagnostic_steps_dhcp as ds_dhcp
 from neutron.debug import diagnostic_steps_ns as ds_ns
 from neutron.debug import diagnostic_steps_ping as ds_ping
 
@@ -167,6 +168,13 @@ class DiagnoseRouter(DiagnoseCommand):
         ))
 
         res.append(ds_ns.CheckRouterNamespaceExistenceStep(args.router_id))
+
+        res.append(ds_dhcp.CheckDhcpAliveStep(
+            get_network_ids=lambda state:
+                set(state.get(c.STATE_ITEM_ROUTER_NETWORK_IDS, {})
+                    .get(args.router_id, set())
+                    )
+        ))
 
         for ip in args.target_ips:
             kwargs = {
