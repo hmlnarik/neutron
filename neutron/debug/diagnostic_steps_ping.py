@@ -20,6 +20,7 @@ from neutron._i18n import _
 from neutron.debug import constants as c
 from neutron.debug import diagnostic_steps_base as ds
 from neutron.debug import diagnostic_steps_ns as ds_ns
+from neutron.debug import diagnostic_steps_secgroups as dss
 
 LOG = logging.getLogger(__name__)
 
@@ -47,6 +48,21 @@ class PingFromNamespaceStep(ds.ExecCmdWithIpFromNamespaceStep):
                                      namespace=self.namespace,
                                      target_ip_addr=new_ip_address,
                                      timeout=self.timeout)
+
+    def diagnose(self, debug_agent, state):
+        res = super(PingFromNamespaceStep, self).diagnose(debug_agent, state)
+
+        if not res.get_result():
+            port = state.get_port_from_ip_address(self.target_ip_addr)
+            port_sgs = port.get('security_groups', [])
+
+            res.add_next_step(
+                dss.step_check_icmp_sec_rule(port_sgs,
+                                             type=8,
+                                             code=0,
+                                             ip_addr=self.target_ip_addr))
+
+        return res
 
 
 class PingFromRouterNamespaceStep(PingFromNamespaceStep):

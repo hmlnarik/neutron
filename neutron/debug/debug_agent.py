@@ -194,3 +194,7 @@ class NeutronDebugAgent(object):
 
     def get_router(self, router_id=None):
         return self.client.show_router(router_id)['router']
+
+    def get_security_group_rules(self, security_group=None):
+        sg = self.client.show_security_group(security_group)
+        return sg.get('security_group', {}).get('security_group_rules', [])

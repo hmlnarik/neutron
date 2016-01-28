@@ -20,6 +20,7 @@ from neutron._i18n import _
 from neutron.debug import constants as c
 from neutron.debug import diagnostic_steps_base as dsb
 from neutron.debug import diagnostic_steps_ns as ds_ns
+from neutron.debug import diagnostic_steps_secgroups as dss
 from neutron.debug import exceptions as exc
 
 
@@ -98,6 +99,22 @@ class CheckTcpPortOpenFromNsStep(dsb.ExecCmdWithIpFromNamespaceStep):
                                           target_ip_addr=new_ip_address,
                                           timeout=self.timeout,
                                           port_number=self.port_number)
+
+    def diagnose(self, debug_agent, state):
+        res = super(CheckTcpPortOpenFromNsStep, self).diagnose(debug_agent,
+                                                               state)
+
+        if not res.get_result():
+            port = state.get_port_from_ip_address(self.target_ip_addr)
+            port_sgs = port.get('security_groups', [])
+
+            res.add_next_step(
+                dss.step_check_tcp_sec_rule(port_sgs,
+                                            tcp_port_min=self.port_number,
+                                            tcp_port_max=self.port_number,
+                                            ip_addr=self.target_ip_addr))
+
+        return res
 
 
 class CheckTcpPortOpenFromRouterNamespaceStep(CheckTcpPortOpenFromNsStep):
@@ -206,8 +223,6 @@ class ObtainNetworkPortsStep(dsb.DiagnosticStep):
 
 
 class ObtainFloatingToFixedIpStep(dsb.DiagnosticStep):
-    name = _('Obtain floating to fixed IP map')
-
     """Obtains information on floating IPs from server and stores
     this data to state.
 
@@ -215,6 +230,9 @@ class ObtainFloatingToFixedIpStep(dsb.DiagnosticStep):
         nothing
 
     """
+
+    name = _('Obtain floating to fixed IP map')
+
     def __init__(self, **kwargs):
         dsb.DiagnosticStep.__init__(self, **kwargs)
 
